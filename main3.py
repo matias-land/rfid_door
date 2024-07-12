@@ -6,12 +6,20 @@ from mfrc522 import SimpleMFRC522
 import csv
 
 
-
-
+GPIO.setmode(GPIO.BCM)
 master_card = 1076492271060
 csv_file = 'perm.csv'
 result_column = 1
 search_column = 0
+relay_pin = 3
+limit_switch_pin = 5
+led_pin = 7
+buzzer_pin = 11
+GPIO.setup(relay_pin, GPIO.OUT)
+GPIO.output(relay_pin, GPIO.LOW)
+GPIO.setup(button_pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+
+
 
 def find_empty_column(filename):
     # Function to find the first empty column in the CSV file
@@ -43,8 +51,33 @@ def find_row_with_value(csv_file, colum_index, search_value):
                 return row
     return None
 
-reader = SimpleMFRC522()
+def close_door():
+    GPIO.output(relay_pin, GPIO.HIGH)
 
+def open_door():
+    GPIO.output(relay_pin, GPIO.LOW)
+
+def open_door_sequence():
+    open_door()
+    time.sleep(5)
+    if GPIO.input(limit_switch_pin)== HIGH:
+        for i in range(20):
+        GPIO.output(led_pin, GPIO.HIGH)
+        time.sleep(0.5)  
+        GPIO.output(led_pin, GPIO.LOW)  
+        time.sleep(0.5)
+        print("test3")
+    while GPIO.input(limit_switch_pin)== HIGH:
+        GPIO.output(led_pin, GPIO.HIGH)
+        GPIO.output(buzzer_pin, GPIO.HIGH)
+        time.sleep(0.5)  
+        GPIO.output(led_pin, GPIO.LOW)
+        GPIO.output(buzzer_pin, GPIO.LOW)  
+        time.sleep(0.5)
+        print("test4")
+
+reader = SimpleMFRC522()
+GPIO.add_event_detect(button_pin, GPIO.FALLING, callback=toggle_relay, bouncetime=200)
 
 try:
     id, text = reader.read()
@@ -63,9 +96,9 @@ try:
             print("test2")
         elif row:
             print(row[result_column])
+            if row[result_column] == 'y':
+                open_door_sequence()
         else:
             print("not found")
-    if id == master_card:
-
 finally:
         GPIO.cleanup()
